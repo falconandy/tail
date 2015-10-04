@@ -70,6 +70,8 @@ type Tail struct {
 	changes *watch.FileChanges
 
 	tomb.Tomb // provides: Done, Kill, Dying
+	
+	isLink bool
 }
 
 var (
@@ -112,7 +114,7 @@ func TailFile(filename string, config Config) (*Tail, error) {
 
 	if t.MustExist {
 		var err error
-		t.file, err = OpenFile(t.Filename)
+		t.file, t.isLink, err = OpenFile(t.Filename)
 		if err != nil {
 			return nil, err
 		}
@@ -148,16 +150,22 @@ func (tail *Tail) close() {
 	close(tail.Lines)
 	if tail.file != nil {
 		tail.file.Close()
+		if tail.isLink {
+			os.Remove(tail.file.Name())
+		}
 	}
 }
 
 func (tail *Tail) reopen() error {
 	if tail.file != nil {
 		tail.file.Close()
+		if tail.isLink {
+			os.Remove(tail.file.Name())
+		}
 	}
 	for {
 		var err error
-		tail.file, err = OpenFile(tail.Filename)
+		tail.file, tail.isLink, err = OpenFile(tail.Filename)
 		if err != nil {
 			if os.IsNotExist(err) {
 				tail.Logger.Printf("Waiting for %s to appear...", tail.Filename)
