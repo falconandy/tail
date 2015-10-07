@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/hpcloud/tail"
 	"os"
+	"os/signal"
 )
 
 func args2config() (tail.Config, int64) {
@@ -38,22 +39,26 @@ func main() {
 	}
 
 	done := make(chan bool)
+	tails := make(chan *tail.Tail, len(flag.Args()))
 	for _, filename := range flag.Args() {
-		go tailFile(filename, config, done)
+		go tailFile(filename, config, done, tails)
 	}
+
+	processInterrupts(tails)
 
 	for _, _ = range flag.Args() {
 		<-done
 	}
 }
 
-func tailFile(filename string, config tail.Config, done chan bool) {
+func tailFile(filename string, config tail.Config, done chan bool, tails chan *tail.Tail) {
 	defer func() { done <- true }()
 	t, err := tail.TailFile(filename, config)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
+	tails <- t
 	for line := range t.Lines {
 		fmt.Println(line.Text)
 	}
@@ -61,4 +66,21 @@ func tailFile(filename string, config tail.Config, done chan bool) {
 	if err != nil {
 		fmt.Println(err)
 	}
+}
+
+func processInterrupts(tails chan *tail.Tail) {
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, os.Interrupt)
+	go func(){
+		for range signalChan {
+			for {
+				select {
+				case t := <-tails:
+					t.Cleanup()
+				default:
+					os.Exit(0)
+				}
+			}
+		}
+	}()
 }

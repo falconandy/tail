@@ -403,4 +403,11 @@ func (tail *Tail) Cleanup() {
 	if tail.tracker != nil {
 		tail.tracker.CloseAll()
 	}
+	
+  if tail.file != nil {
+		tail.file.Close()
+		if tail.isLink {
+			os.Remove(tail.file.Name())
+		}
+	}
 }

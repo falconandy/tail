@@ -36,12 +36,13 @@ func TestMustExist(t *testing.T) {
 		t.Error("MustExist:false is violated")
 	}
 	tail.Stop()
-	_, err = TailFile("README.md", Config{Follow: true, MustExist: true})
+	tail2, err := TailFile("README.md", Config{Follow: true, MustExist: true})
 	if err != nil {
 		t.Error("MustExist:true on an existing file is violated")
 	}
 	tail.Stop()
 	tail.Cleanup()
+	tail2.Cleanup()
 }
 
 func TestStop(t *testing.T) {
@@ -316,8 +317,8 @@ func TestTell(_t *testing.T) {
 	config = Config{
 		Follow:   false,
 		Location: &SeekInfo{offset, os.SEEK_SET}}
-	tail = t.StartTail("test.txt", config)
-	for l := range tail.Lines {
+	tail2 := t.StartTail("test.txt", config)
+	for l := range tail2.Lines {
 		// it may readed one line in the chan(tail.Lines),
 		// so it may lost one line.
 		if l.Text != "world" && l.Text != "again" {
@@ -327,8 +328,9 @@ func TestTell(_t *testing.T) {
 		break
 	}
 	t.RemoveFile("test.txt")
-	tail.Done()
+	tail2.Done()
 	tail.Cleanup()
+	tail2.Cleanup()
 }
 
 // Test library

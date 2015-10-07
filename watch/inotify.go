@@ -25,7 +25,7 @@ func NewInotifyFileWatcher(filename string, w *fsnotify.Watcher) *InotifyFileWat
 }
 
 func (fw *InotifyFileWatcher) BlockUntilExists(t *tomb.Tomb) error {
-	dirname := filepath.Dir(fw.Filename)
+	dirname, filename := filepath.Split(fw.Filename)
 
 	// Watch for new files to be created in the parent directory.
 	err := fw.w.WatchFlags(dirname, fsnotify.FSN_CREATE)
@@ -46,7 +46,7 @@ func (fw *InotifyFileWatcher) BlockUntilExists(t *tomb.Tomb) error {
 		case evt, ok := <-fw.w.Event:
 			if !ok {
 				return fmt.Errorf("inotify watcher has been closed")
-			} else if evt.Name == fw.Filename {
+			} else if filepath.Base(evt.Name) == filename {
 				return nil
 			}
 		case <-t.Dying():
