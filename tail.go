@@ -16,6 +16,7 @@ import (
 	"github.com/hpcloud/tail/util"
 	"github.com/hpcloud/tail/watch"
 	"gopkg.in/tomb.v1"
+	"runtime"
 )
 
 var (
@@ -104,6 +105,7 @@ func TailFile(filename string, config Config) (*Tail, error) {
 	if t.Poll {
 		t.watcher = watch.NewPollingFileWatcher(filename)
 	} else {
+		t.isLink = runtime.GOOS == "windows"
 		t.tracker = watch.NewInotifyTracker()
 		w, err := t.tracker.NewWatcher()
 		if err != nil {
@@ -114,7 +116,7 @@ func TailFile(filename string, config Config) (*Tail, error) {
 
 	if t.MustExist {
 		var err error
-		t.file, t.isLink, err = OpenFile(t.Filename)
+		t.file, err = OpenFile(t.Filename, t.isLink)
 		if err != nil {
 			return nil, err
 		}
@@ -165,7 +167,7 @@ func (tail *Tail) reopen() error {
 	}
 	for {
 		var err error
-		tail.file, tail.isLink, err = OpenFile(tail.Filename)
+		tail.file, err = OpenFile(tail.Filename, tail.isLink)
 		if err != nil {
 			if os.IsNotExist(err) {
 				tail.Logger.Printf("Waiting for %s to appear...", tail.Filename)

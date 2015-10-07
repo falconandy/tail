@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-func OpenFile(name string) (file *os.File, isLink bool, err error) {
+func OpenFile(name string, bool needLink) (file *os.File, err error) {
 	file, err = os.Open(name)
-	return file, false, err
+	return file, err
 }
