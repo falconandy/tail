@@ -32,7 +32,7 @@ func createLink(originalName string) (linkFileName string, err error) {
 		return "", err
 	}
 	if filepath.VolumeName(originalPath) != filepath.VolumeName(tempDirPath) {
-		tempDirPath = path.Dir(originalPath)
+		tempDirPath = path.Dir(originalName)
 	}
 	linkFileName, err = getUniqueTempFileName(tempDirPath)
 	if err != nil {
