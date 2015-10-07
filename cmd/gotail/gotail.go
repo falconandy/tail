@@ -19,6 +19,7 @@ func args2config() (tail.Config, int64) {
 	flag.BoolVar(&config.Follow, "f", false, "wait for additional data to be appended to the file")
 	flag.BoolVar(&config.ReOpen, "F", false, "follow, and track file rename/rotation")
 	flag.BoolVar(&config.Poll, "p", false, "use polling, instead of inotify")
+	flag.StringVar(&config.TempLinkDirectory, "t", "", "directory for temp hard links (Windows only)")
 	flag.Parse()
 	if config.ReOpen {
 		config.Follow = true

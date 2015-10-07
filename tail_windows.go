@@ -3,17 +3,18 @@
 package tail
 
 import (
-	"path"
 	"github.com/hpcloud/tail/winfile"
 	"os"
 	"io/ioutil"
 	"path/filepath"
+	"errors"
+	"strings"
 )
 
-func OpenFile(name string, needLink bool) (file *os.File, err error) {
+func OpenFile(name string, needLink bool, linkDirectory string) (file *os.File, err error) {
 	linkFileName := name
 	if needLink {
-		linkFileName, err = createLink(name)
+		linkFileName, err = createLink(name, linkDirectory)
 		if err != nil {
 			return nil, err
 		}
@@ -22,19 +23,12 @@ func OpenFile(name string, needLink bool) (file *os.File, err error) {
 	return file, err
 }
 
-func createLink(originalName string) (linkFileName string, err error) {
-	originalPath, err := filepath.Abs(originalName)
+func createLink(originalName string, linkDirectory string) (linkFileName string, err error) {
+	linkDirectoryPath, err := getTempLinkDirectoryPath(originalName, linkDirectory)
 	if err != nil {
 		return "", err
 	}
-	tempDirPath, err := filepath.Abs(os.TempDir())
-	if err != nil {
-		return "", err
-	}
-	if filepath.VolumeName(originalPath) != filepath.VolumeName(tempDirPath) {
-		tempDirPath = path.Dir(originalName)
-	}
-	linkFileName, err = getUniqueTempFileName(tempDirPath)
+	linkFileName, err = getUniqueTempFileName(linkDirectoryPath)
 	if err != nil {
 		return "", err
 	}
@@ -43,6 +37,31 @@ func createLink(originalName string) (linkFileName string, err error) {
 		return "", err
 	}
 	return linkFileName, nil
+}
+
+func getTempLinkDirectoryPath(originalName string, linkDirectory string) (linkDirectoryPath string, err error) {
+	originalPath, err := filepath.Abs(originalName)
+	if err != nil {
+		return "", err
+	}
+	if linkDirectory != "" {
+		configLinkDirectoryPath, err := filepath.Abs(linkDirectory)
+		if err != nil {
+			return "", err
+		}
+		if strings.ToLower(filepath.VolumeName(configLinkDirectoryPath)) != strings.ToLower(filepath.VolumeName(originalPath)) {
+			return "", errors.New("Volumes of files and directory for temp hard links must be identical")
+		}
+		return configLinkDirectoryPath, nil
+	}
+	tempDirectoryPath, err := filepath.Abs(os.TempDir())
+	if err != nil {
+		return "", err
+	}
+	if strings.ToLower(filepath.VolumeName(originalPath)) == strings.ToLower(filepath.VolumeName(tempDirectoryPath)) {
+		return tempDirectoryPath, nil
+	}
+	return filepath.Dir(originalPath), nil
 }
 
 func getUniqueTempFileName(tempDir string) (name string, err error) {
@@ -55,6 +74,9 @@ func getUniqueTempFileName(tempDir string) (name string, err error) {
 	if err != nil {
 		return "", err
 	}
-	os.Remove(tempFileName)
+	err = os.Remove(tempFileName)
+	if err != nil {
+		return "", err
+	}
 	return tempFileName, nil
 }

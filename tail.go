@@ -53,6 +53,8 @@ type Config struct {
 	Follow      bool // Continue looking for new lines (tail -f)
 	MaxLineSize int  // If non-zero, split longer lines into multiple lines
 
+	TempLinkDirectory string // Directory for temp hard links (Windows only)
+
 	// Logger, when nil, is set to tail.DefaultLogger
 	// To disable logging: set field to tail.DiscardingLogger
 	Logger *log.Logger
@@ -116,7 +118,7 @@ func TailFile(filename string, config Config) (*Tail, error) {
 
 	if t.MustExist {
 		var err error
-		t.file, err = OpenFile(t.Filename, t.isLink)
+		t.file, err = OpenFile(t.Filename, t.isLink, t.TempLinkDirectory)
 		if err != nil {
 			return nil, err
 		}
@@ -167,7 +169,7 @@ func (tail *Tail) reopen() error {
 	}
 	for {
 		var err error
-		tail.file, err = OpenFile(tail.Filename, tail.isLink)
+		tail.file, err = OpenFile(tail.Filename, tail.isLink, tail.TempLinkDirectory)
 		if err != nil {
 			if os.IsNotExist(err) {
 				tail.Logger.Printf("Waiting for %s to appear...", tail.Filename)
